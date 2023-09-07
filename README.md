@@ -3,7 +3,7 @@
 
 ## Development
 
-Make sure that Soul Core API is up and running and then
+Make sure that [Soul Core API](https://github.com/thevahidal/soul) is up and running and then
 
 ```bash
 cp .env.sample .env # Duplicate sample environment variables
