@@ -7,7 +7,7 @@ Make sure that [Soul Core API](https://github.com/thevahidal/soul) is up and run
 
 ```bash
 cp .env.sample .env # Duplicate sample environment variables
-nano .env # Update the environment variables
+vim .env # Update the environment variables
 
 npm install # Install dependencies
 npm run dev # Start the dev server
