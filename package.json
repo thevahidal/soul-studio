@@ -46,6 +46,7 @@
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.2.9",
+    "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.10",
     "dotenv": "^17.4.2",
     "eslint": "^10.8.1",

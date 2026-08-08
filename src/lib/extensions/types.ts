@@ -9,10 +9,19 @@ export interface StudioNavItem {
   icon?: string;
 }
 
+// Prop contract every field-renderer component must accept -- event-based
+// (`onchange`) rather than `bind:value`, since two-way binding across a
+// dynamically-loaded, arbitrary external component is fragile.
+export interface FieldRendererProps {
+  value: unknown;
+  onchange: (value: unknown) => void;
+  disabled?: boolean;
+}
+
 export interface StudioFieldRenderer {
   table: string;
   column: string;
-  component: Component;
+  component: Component<FieldRendererProps>;
 }
 
 export interface StudioRowAction {

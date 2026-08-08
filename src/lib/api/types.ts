@@ -38,9 +38,30 @@ export interface TableSchemaColumn {
   pk: number;
 }
 
+// Normalized shape used once a raw pragma_foreign_key_list entry has been
+// resolved for a specific local column -- see lib/metadata/schemaToForm.ts.
 export interface ForeignKeyInfo {
   table: string;
   column: string;
+}
+
+// Raw shape of `pragma_foreign_key_list`, as returned in the `foreignKeys`
+// array alongside GET /api/tables/:name's `data`. `from` is the local
+// column name; `table`/`to` identify the referenced table/column.
+export interface ForeignKeyListEntry {
+  id: number;
+  seq: number;
+  table: string;
+  from: string;
+  to: string;
+  on_update: string;
+  on_delete: string;
+  match: string;
+}
+
+export interface GetTableSchemaResponse {
+  data: TableSchemaColumn[];
+  foreignKeys: ForeignKeyListEntry[];
 }
 
 export interface CreateTableFieldForeignKey {

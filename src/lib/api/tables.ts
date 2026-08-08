@@ -1,6 +1,7 @@
 import { request } from './client';
 import type {
   CreateTablePayload,
+  GetTableSchemaResponse,
   TableListItem,
   TableSchemaColumn,
 } from './types';
@@ -16,9 +17,7 @@ export const listTables = (params?: { search?: string; ordering?: string }) => {
 };
 
 export const getTableSchema = (name: string) =>
-  request<{ data: TableSchemaColumn[] }>(
-    `/api/tables/${encodeURIComponent(name)}`,
-  );
+  request<GetTableSchemaResponse>(`/api/tables/${encodeURIComponent(name)}`);
 
 export const createTable = (payload: CreateTablePayload) =>
   request<{
