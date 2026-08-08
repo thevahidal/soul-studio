@@ -7,6 +7,7 @@ const STATE_FILE = join(process.cwd(), 'tests/e2e/.e2e-state.json');
 
 export interface E2eState {
   apiUrl: string;
+  wsUrl: string;
   adminUsername: string;
   adminPassword: string;
   seedTable: string;

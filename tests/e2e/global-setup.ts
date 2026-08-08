@@ -74,6 +74,7 @@ export default async function globalSetup() {
 
   const state: E2eState = {
     apiUrl: backend.baseUrl,
+    wsUrl: backend.wsUrl,
     adminUsername: backend.adminUsername,
     adminPassword: backend.adminPassword,
     seedTable: SEED_TABLE,

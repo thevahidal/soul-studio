@@ -3,6 +3,13 @@
   import { getTableSchema } from '$lib/api/tables';
   import type { Row } from '$lib/api/types';
   import { isHttpError } from '$lib/api/errors';
+  import {
+    subscribeToTable,
+    type DeleteData,
+    type InsertData,
+    type UpdateData,
+  } from '$lib/api/ws';
+  import { rowMatchesQuery } from '$lib/realtime/rowMatcher';
   import { toast } from '$lib/stores/toast.svelte';
   import { displayLabel } from '$lib/metadata/displayValue';
   import {
@@ -99,6 +106,62 @@
         toast.push(errorMessage(err), 'error');
       }
     })();
+  });
+
+  // The backend broadcasts every row change to every subscriber with no
+  // server-side query filtering (see soul/src/websocket.js), so incoming
+  // broadcasts are matched against the currently-active search/filters
+  // client-side before being merged. This is deliberately not full
+  // pagination-aware reconciliation -- a row is only ever inserted into
+  // the currently-visible page when there's room for it, never forced
+  // into sort position out of a full page; `total` is still adjusted so
+  // the row-count badge stays accurate either way.
+  const handleRealtimeInsert = (data: InsertData) => {
+    const newRow: Row = { ...data, [pkField]: data.pk };
+    if (rows.some((row) => String(row[pkField]) === String(newRow[pkField]))) {
+      return;
+    }
+    if (!rowMatchesQuery(newRow, { search, filters, fields })) {
+      total += 1;
+      return;
+    }
+    if (rows.length < limit) {
+      rows = [...rows, newRow];
+    }
+    total += 1;
+  };
+
+  const handleRealtimeUpdate = (data: UpdateData, lookupField?: string) => {
+    const key = lookupField ?? pkField;
+    const { pks, ...patch } = data;
+    let removed = 0;
+    rows = rows.flatMap((row) => {
+      if (!pks.includes(String(row[key]))) return [row];
+      const patched = { ...row, ...patch };
+      if (!rowMatchesQuery(patched, { search, filters, fields })) {
+        removed += 1;
+        return [];
+      }
+      return [patched];
+    });
+    total -= removed;
+  };
+
+  const handleRealtimeDelete = (data: DeleteData, lookupField?: string) => {
+    const key = lookupField ?? pkField;
+    const before = rows.length;
+    rows = rows.filter((row) => !data.pks.includes(String(row[key])));
+    total -= before - rows.length;
+  };
+
+  $effect(() => {
+    const unsubscribe = subscribeToTable(tableName, {
+      onInsert: handleRealtimeInsert,
+      onUpdate: handleRealtimeUpdate,
+      onDelete: handleRealtimeDelete,
+      onAuthError: (message) => toast.push(message, 'error'),
+    });
+    return unsubscribe;
   });
 
   const applyFilters = () => {
