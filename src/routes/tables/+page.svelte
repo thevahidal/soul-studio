@@ -1,56 +1,40 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { listTables } from '$lib/api/tables';
-  import type { TableListItem } from '$lib/api/types';
-  import { isHttpError } from '$lib/api/errors';
+  import Table2Icon from '@lucide/svelte/icons/table-2';
+  import { tablesStore } from '$lib/stores/tables.svelte';
+  import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 
-  let tables = $state<TableListItem[]>([]);
-  let loading = $state(true);
-  let error = $state<string | null>(null);
-
-  $effect(() => {
-    listTables()
-      .then((res) => {
-        tables = res.data;
-      })
-      .catch((err) => {
-        // Table list/create have no `:name` route param, so Soul's
-        // permission check always denies non-superusers here -- see
-        // soul/src/middlewares/auth.js. This is a documented backend
-        // limitation, not something this page can work around.
-        error =
-          isHttpError(err) && err.status === 403
-            ? 'Only superusers can list tables.'
-            : isHttpError(err)
-              ? err.message
-              : 'Failed to load tables.';
-      })
-      .finally(() => {
-        loading = false;
-      });
-  });
+  tablesStore.ensureLoaded();
 </script>
 
 <svelte:head>
   <title>Tables — Soul Studio</title>
 </svelte:head>
 
-<h1>Tables</h1>
+<h1 class="mb-6 text-2xl font-semibold tracking-tight">Tables</h1>
 
-{#if loading}
-  <p>Loading…</p>
-{:else if error}
-  <p>{error}</p>
-{:else if tables.length === 0}
-  <p>No tables yet.</p>
-{:else}
-  <ul>
-    {#each tables as table (table.name)}
-      <li>
-        <a href={resolve('/tables/[name]', { name: table.name })}>
-          {table.name}
-        </a>
-      </li>
+{#if tablesStore.status === 'loading' || tablesStore.status === 'idle'}
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    {#each Array(8) as _, i (i)}
+      <Skeleton class="h-16 w-full rounded-lg" />
     {/each}
-  </ul>
+  </div>
+{:else if tablesStore.status === 'forbidden'}
+  <p class="text-muted-foreground text-sm">Only superusers can list tables.</p>
+{:else if tablesStore.status === 'error'}
+  <p class="text-destructive text-sm">{tablesStore.errorMessage}</p>
+{:else if tablesStore.tables.length === 0}
+  <p class="text-muted-foreground text-sm">No tables yet.</p>
+{:else}
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    {#each tablesStore.tables as table (table.name)}
+      <a
+        href={resolve('/tables/[name]', { name: table.name })}
+        class="hover:border-primary/50 hover:bg-accent/50 flex items-center gap-2.5 rounded-lg border p-4 text-sm font-medium transition-colors"
+      >
+        <Table2Icon class="text-muted-foreground size-4 shrink-0" />
+        <span class="truncate">{table.name}</span>
+      </a>
+    {/each}
+  </div>
 {/if}

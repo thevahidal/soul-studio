@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Row } from '$lib/api/types';
   import type { FieldDescriptor } from '$lib/metadata/schemaToForm';
+  import { Label } from '$lib/components/ui/label/index.js';
+  import { Button } from '$lib/components/ui/button/index.js';
   import FieldInput from './FieldInput.svelte';
 
   let {
@@ -33,42 +35,34 @@
   };
 </script>
 
-<form onsubmit={handleSubmit} class="row-form">
-  {#each fields as field (field.name)}
-    <label>
-      {field.name}{field.required ? ' *' : ''}
-      <FieldInput
-        {tableName}
-        {field}
-        bind:value={values[field.name]}
-        disabled={mode === 'edit' && field.isPrimaryKey}
-      />
-    </label>
-  {/each}
-  <div class="row-form-actions">
-    <button type="submit" disabled={submitting}>
-      {submitting ? 'Saving…' : 'Save'}
-    </button>
-    <button type="button" onclick={onCancel} disabled={submitting}>
+<form onsubmit={handleSubmit} class="flex h-full flex-col">
+  <div class="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+    {#each fields as field (field.name)}
+      <div class="grid gap-1.5">
+        <Label for={`field-${field.name}`}
+          >{field.name}{field.required ? ' *' : ''}</Label
+        >
+        <FieldInput
+          id={`field-${field.name}`}
+          {tableName}
+          {field}
+          bind:value={values[field.name]}
+          disabled={mode === 'edit' && field.isPrimaryKey}
+        />
+      </div>
+    {/each}
+  </div>
+  <div class="flex items-center justify-end gap-2 border-t px-4 py-3">
+    <Button
+      type="button"
+      variant="outline"
+      onclick={onCancel}
+      disabled={submitting}
+    >
       Cancel
-    </button>
+    </Button>
+    <Button type="submit" disabled={submitting}>
+      {submitting ? 'Saving…' : 'Save'}
+    </Button>
   </div>
 </form>
-
-<style>
-  .row-form {
-    display: grid;
-    gap: 0.6rem;
-    max-width: 24rem;
-  }
-
-  .row-form label {
-    display: grid;
-    gap: 0.25rem;
-  }
-
-  .row-form-actions {
-    display: flex;
-    gap: 0.5rem;
-  }
-</style>

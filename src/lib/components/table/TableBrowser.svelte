@@ -10,6 +10,18 @@
     type FieldDescriptor,
   } from '$lib/metadata/schemaToForm';
   import { SvelteSet } from 'svelte/reactivity';
+  import * as Table from '$lib/components/ui/table/index.js';
+  import * as Sheet from '$lib/components/ui/sheet/index.js';
+  import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Badge } from '$lib/components/ui/badge/index.js';
+  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+  import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+  import PencilIcon from '@lucide/svelte/icons/pencil';
+  import Trash2Icon from '@lucide/svelte/icons/trash-2';
+  import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
+  import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+  import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
   import BulkActionsBar from './BulkActionsBar.svelte';
   import FilterBar, { type DraftFilter } from './FilterBar.svelte';
   import Pagination from './Pagination.svelte';
@@ -33,6 +45,9 @@
   let formMode = $state<'create' | 'edit' | null>(null);
   let editingRow = $state<Row | null>(null);
   let submitting = $state(false);
+
+  let deleteTarget = $state<Row | 'bulk' | null>(null);
+  let deleteDialogOpen = $state(false);
 
   const pkField = $derived(fields.find((f) => f.isPrimaryKey)?.name ?? 'id');
   const fkColumns = $derived(
@@ -162,26 +177,35 @@
     }
   };
 
-  const handleDeleteOne = async (row: Row) => {
-    if (!confirm('Delete this row?')) return;
-    try {
-      await deleteRow(tableName, row[pkField] as string | number);
-      toast.push('Row deleted', 'success');
-      await loadRows();
-    } catch (err) {
-      toast.push(errorMessage(err), 'error');
-    }
+  const requestDeleteOne = (row: Row) => {
+    deleteTarget = row;
+    deleteDialogOpen = true;
   };
 
-  const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${selected.size} row(s)?`)) return;
-    try {
-      await deleteRow(tableName, Array.from(selected).join(','));
-      toast.push('Rows deleted', 'success');
-      await loadRows();
-    } catch (err) {
-      toast.push(errorMessage(err), 'error');
+  const requestBulkDelete = () => {
+    deleteTarget = 'bulk';
+    deleteDialogOpen = true;
+  };
+
+  const confirmDelete = async () => {
+    if (deleteTarget === 'bulk') {
+      try {
+        await deleteRow(tableName, Array.from(selected).join(','));
+        toast.push('Rows deleted', 'success');
+        await loadRows();
+      } catch (err) {
+        toast.push(errorMessage(err), 'error');
+      }
+    } else if (deleteTarget) {
+      try {
+        await deleteRow(tableName, deleteTarget[pkField] as string | number);
+        toast.push('Row deleted', 'success');
+        await loadRows();
+      } catch (err) {
+        toast.push(errorMessage(err), 'error');
+      }
     }
+    deleteTarget = null;
   };
 
   const cellDisplay = (row: Row, field: FieldDescriptor): string => {
@@ -198,19 +222,126 @@
   };
 </script>
 
-<div class="table-browser">
+<div class="flex flex-col gap-4">
+  <div class="flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <h1 class="text-2xl font-semibold tracking-tight">{tableName}</h1>
+      {#if !loading}
+        <Badge variant="secondary">{total} row{total === 1 ? '' : 's'}</Badge>
+      {/if}
+    </div>
+    <Button onclick={openCreate}>+ New row</Button>
+  </div>
+
   {#if fields.length > 0}
     <FilterBar {fields} bind:search bind:filters onApply={applyFilters} />
   {/if}
 
-  <div class="toolbar">
-    <button onclick={openCreate}>+ New row</button>
-  </div>
+  <BulkActionsBar selectedCount={selected.size} onDelete={requestBulkDelete} />
 
-  <BulkActionsBar selectedCount={selected.size} onDelete={handleBulkDelete} />
+  {#if loading}
+    <div class="flex flex-col gap-2">
+      {#each Array(5) as _, i (i)}
+        <Skeleton class="h-9 w-full" />
+      {/each}
+    </div>
+  {:else if rows.length === 0}
+    <p class="text-muted-foreground py-8 text-center text-sm">No rows.</p>
+  {:else}
+    <div class="rounded-lg border">
+      <Table.Root>
+        <Table.Header>
+          <Table.Row class="hover:bg-transparent">
+            <Table.Head class="w-10">
+              <Checkbox
+                checked={selected.size > 0 && selected.size === rows.length}
+                indeterminate={selected.size > 0 && selected.size < rows.length}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Select all rows"
+              />
+            </Table.Head>
+            {#each fields as field (field.name)}
+              <Table.Head>
+                <button
+                  type="button"
+                  onclick={() => toggleSort(field.name)}
+                  class="hover:text-foreground flex items-center gap-1 font-medium"
+                >
+                  {field.name}
+                  {#if ordering === field.name}
+                    <ArrowUpIcon class="size-3.5" />
+                  {:else if ordering === `-${field.name}`}
+                    <ArrowDownIcon class="size-3.5" />
+                  {:else}
+                    <ChevronsUpDownIcon class="size-3.5 opacity-40" />
+                  {/if}
+                </button>
+              </Table.Head>
+            {/each}
+            <Table.Head class="w-20 text-right">Actions</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {#each rows as row (row[pkField])}
+            <Table.Row>
+              <Table.Cell>
+                <Checkbox
+                  checked={selected.has(row[pkField])}
+                  onCheckedChange={() => toggleSelect(row[pkField])}
+                  aria-label="Select row"
+                />
+              </Table.Cell>
+              {#each fields as field (field.name)}
+                <Table.Cell class="font-mono text-xs">
+                  {cellDisplay(row, field)}
+                </Table.Cell>
+              {/each}
+              <Table.Cell>
+                <div class="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Edit"
+                    onclick={() => openEdit(row)}
+                  >
+                    <PencilIcon class="size-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Delete"
+                    class="text-destructive hover:text-destructive"
+                    onclick={() => requestDeleteOne(row)}
+                  >
+                    <Trash2Icon class="size-3.5" />
+                  </Button>
+                </div>
+              </Table.Cell>
+            </Table.Row>
+          {/each}
+        </Table.Body>
+      </Table.Root>
+    </div>
 
-  {#if formMode}
-    <div class="form-panel">
+    <Pagination {page} {limit} {total} onPageChange={goToPage} />
+  {/if}
+</div>
+
+<Sheet.Root
+  open={formMode !== null}
+  onOpenChange={(open) => {
+    if (!open) closeForm();
+  }}
+>
+  <Sheet.Content class="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+    <Sheet.Header class="border-b px-4 py-3">
+      <Sheet.Title>{formMode === 'create' ? 'New row' : 'Edit row'}</Sheet.Title
+      >
+      <Sheet.Description>
+        {tableName}
+      </Sheet.Description>
+    </Sheet.Header>
+    {#if formMode}
       {#key editingRow}
         <RowForm
           {tableName}
@@ -222,72 +353,30 @@
           onCancel={closeForm}
         />
       {/key}
-    </div>
-  {/if}
+    {/if}
+  </Sheet.Content>
+</Sheet.Root>
 
-  {#if loading}
-    <p>Loading…</p>
-  {:else if rows.length === 0}
-    <p>No rows.</p>
-  {:else}
-    <table>
-      <thead>
-        <tr>
-          <th>
-            <input
-              type="checkbox"
-              checked={selected.size > 0 && selected.size === rows.length}
-              onchange={toggleSelectAll}
-            />
-          </th>
-          {#each fields as field (field.name)}
-            <th>
-              <button type="button" onclick={() => toggleSort(field.name)}>
-                {field.name}
-                {#if ordering === field.name}↑{:else if ordering === `-${field.name}`}↓{/if}
-              </button>
-            </th>
-          {/each}
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each rows as row (row[pkField])}
-          <tr>
-            <td>
-              <input
-                type="checkbox"
-                checked={selected.has(row[pkField])}
-                onchange={() => toggleSelect(row[pkField])}
-              />
-            </td>
-            {#each fields as field (field.name)}
-              <td>{cellDisplay(row, field)}</td>
-            {/each}
-            <td>
-              <button type="button" onclick={() => openEdit(row)}>Edit</button>
-              <button type="button" onclick={() => handleDeleteOne(row)}>
-                Delete
-              </button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-
-    <Pagination {page} {limit} {total} onPageChange={goToPage} />
-  {/if}
-</div>
-
-<style>
-  .toolbar {
-    margin-bottom: 0.75rem;
-  }
-
-  .form-panel {
-    border: 1px solid var(--divider);
-    border-radius: 4px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-</style>
+<AlertDialog.Root bind:open={deleteDialogOpen}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>
+        {deleteTarget === 'bulk'
+          ? `Delete ${selected.size} row(s)?`
+          : 'Delete this row?'}
+      </AlertDialog.Title>
+      <AlertDialog.Description>
+        This action cannot be undone.
+      </AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action
+        class="bg-destructive hover:bg-destructive/90 text-white"
+        onclick={confirmDelete}
+      >
+        Delete
+      </AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>

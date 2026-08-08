@@ -3,6 +3,7 @@ import { resolve } from '$app/paths';
 import * as authApi from '$lib/api/auth';
 import { listTables } from '$lib/api/tables';
 import { registerSessionExpiredHandler } from '$lib/api/client';
+import { tablesStore } from '$lib/stores/tables.svelte';
 
 type SessionStatus = 'unknown' | 'authenticated' | 'anonymous';
 
@@ -28,6 +29,7 @@ const createSessionStore = () => {
     status = 'anonymous';
     username = null;
     isSuperuserHint = false;
+    tablesStore.reset();
   };
 
   registerSessionExpiredHandler(() => {

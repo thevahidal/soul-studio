@@ -13,6 +13,9 @@ export default tseslint.config(
       'package/**',
       '_studio_extensions/**',
       'src/lib/extensions/registry.generated.ts',
+      // shadcn-svelte CLI-vendored primitives -- not hand-maintained, kept
+      // as close to upstream registry output as possible.
+      'src/lib/components/ui/**',
       'playwright-report/**',
       'test-results/**',
       'coverage/**',
@@ -27,6 +30,12 @@ export default tseslint.config(
         ...globals.browser,
         ...globals.node,
       },
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
   {

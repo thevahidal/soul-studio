@@ -49,9 +49,12 @@ test('deletes a row', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('cell', { name: title })).toBeVisible();
 
-  page.once('dialog', (dialog) => dialog.accept());
   const row = page.getByRole('row', { name: title });
   await row.getByRole('button', { name: 'Delete' }).click();
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: 'Delete' })
+    .click();
 
   await expect(page.getByRole('cell', { name: title })).toHaveCount(0);
 });

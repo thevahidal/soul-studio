@@ -1,3 +1,5 @@
+import { toast as sonnerToast } from 'svelte-sonner';
+
 export interface Toast {
   id: number;
   message: string;
@@ -5,26 +7,21 @@ export interface Toast {
 }
 
 const createToastStore = () => {
-  let toasts = $state<Toast[]>([]);
-  let nextId = 0;
-
-  const dismiss = (id: number) => {
-    toasts = toasts.filter((toast) => toast.id !== id);
-  };
-
   const push = (message: string, variant: Toast['variant'] = 'info') => {
-    const id = nextId++;
-    toasts = [...toasts, { id, message, variant }];
-    setTimeout(() => dismiss(id), 5000);
+    if (variant === 'success') {
+      sonnerToast.success(message);
+    } else if (variant === 'error') {
+      sonnerToast.error(message);
+    } else {
+      sonnerToast.message(message);
+    }
   };
 
-  return {
-    get toasts() {
-      return toasts;
-    },
-    push,
-    dismiss,
+  const dismiss = (id: number | string) => {
+    sonnerToast.dismiss(id);
   };
+
+  return { push, dismiss };
 };
 
 export const toast = createToastStore();

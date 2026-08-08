@@ -4,7 +4,9 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { session } from '$lib/stores/session.svelte';
-  import { toast } from '$lib/stores/toast.svelte';
+  import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+  import { Toaster } from '$lib/components/ui/sonner/index.js';
+  import AppSidebar from '$lib/components/AppSidebar.svelte';
   import '../app.css';
 
   let { children } = $props();
@@ -27,23 +29,25 @@
 </script>
 
 {#if session.status === 'unknown'}
-  <p class="app-main">Loading…</p>
+  <div class="flex min-h-svh items-center justify-center">
+    <p class="text-muted-foreground text-sm">Loading…</p>
+  </div>
+{:else if session.isAuthenticated}
+  <Sidebar.Provider>
+    <AppSidebar />
+    <Sidebar.Inset>
+      <header class="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+        <Sidebar.Trigger />
+      </header>
+      <div class="flex-1 overflow-auto p-6">
+        {@render children()}
+      </div>
+    </Sidebar.Inset>
+  </Sidebar.Provider>
 {:else}
-  {#if session.isAuthenticated}
-    <nav class="app-nav">
-      <a href={resolve('/tables')}>Tables</a>
-      <span style="flex: 1"></span>
-      {#if session.username}<span>{session.username}</span>{/if}
-      <button onclick={() => session.logout()}>Log out</button>
-    </nav>
-  {/if}
-  <main class="app-main">
+  <div class="flex min-h-svh items-center justify-center p-6">
     {@render children()}
-  </main>
+  </div>
 {/if}
 
-<div class="toasts">
-  {#each toast.toasts as t (t.id)}
-    <div class="toast toast-{t.variant}">{t.message}</div>
-  {/each}
-</div>
+<Toaster richColors closeButton />
