@@ -11,6 +11,7 @@ export interface E2eState {
   adminUsername: string;
   adminPassword: string;
   seedTable: string;
+  pluginTable: string;
 }
 
 export const writeSharedState = (state: E2eState): void => {

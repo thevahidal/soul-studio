@@ -12,6 +12,7 @@
     type UpdateData,
   } from '$lib/api/ws';
   import { rowMatchesQuery } from '$lib/realtime/rowMatcher';
+  import { registry } from '$lib/extensions/registry';
   import { tablesStore } from '$lib/stores/tables.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { displayLabel } from '$lib/metadata/displayValue';
@@ -64,6 +65,7 @@
   const fkColumns = $derived(
     fields.filter((f) => f.foreignKey).map((f) => f.name),
   );
+  const pluginRowActions = $derived(registry.rowActions.get(tableName) ?? []);
 
   const errorMessage = (err: unknown) =>
     isHttpError(err) ? err.message : 'Something went wrong';
@@ -404,6 +406,15 @@
                   >
                     <Trash2Icon class="size-3.5" />
                   </Button>
+                  {#each pluginRowActions as action (action.label)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onclick={() => action.onClick(row)}
+                    >
+                      {action.label}
+                    </Button>
+                  {/each}
                 </div>
               </Table.Cell>
             </Table.Row>

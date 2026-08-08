@@ -1,17 +1,19 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { resolve } from '$app/paths';
+  import { resolve, base } from '$app/paths';
   import Table2Icon from '@lucide/svelte/icons/table-2';
   import SearchIcon from '@lucide/svelte/icons/search';
   import LogOutIcon from '@lucide/svelte/icons/log-out';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import ShieldIcon from '@lucide/svelte/icons/shield';
+  import PlugIcon from '@lucide/svelte/icons/plug';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { tablesStore } from '$lib/stores/tables.svelte';
   import { session } from '$lib/stores/session.svelte';
+  import { registry } from '$lib/extensions/registry';
 
   let search = $state('');
 
@@ -123,6 +125,31 @@
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
+          </Sidebar.Menu>
+        </Sidebar.GroupContent>
+      </Sidebar.Group>
+    {/if}
+
+    {#if registry.navItems.length > 0}
+      <Sidebar.Group>
+        <Sidebar.GroupLabel>Plugins</Sidebar.GroupLabel>
+        <Sidebar.GroupContent>
+          <Sidebar.Menu>
+            {#each registry.navItems as item (item.href)}
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  isActive={page.url.pathname === `${base}${item.href}`}
+                >
+                  {#snippet child({ props })}
+                    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- plugin-authored href, not a statically known SvelteKit route id, so resolve() can't target it -->
+                    <a href={`${base}${item.href}`} {...props}>
+                      <PlugIcon />
+                      <span>{item.label}</span>
+                    </a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            {/each}
           </Sidebar.Menu>
         </Sidebar.GroupContent>
       </Sidebar.Group>
