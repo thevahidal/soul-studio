@@ -1,32 +1,67 @@
 {
-	"name": "soul-studio",
-	"version": "0.0.2",
-	"description": "GUI for Soul: A SQLite REST and realtime server",
-	"scripts": {
-		"dev": "vite dev --port 3000",
-		"build": "vite build",
-		"preview": "vite preview"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/thevahidal/soul.git"
-	},
-	"author": "Vahid Al @thevahidal",
-	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/thevahidal/soul/issues"
-	},
-	"homepage": "https://github.com/thevahidal/soul#readme",
-	"devDependencies": {
-		"@sveltejs/adapter-auto": "2.0.0",
-		"@sveltejs/adapter-node": "^1.2.0",
-		"@sveltejs/adapter-static": "^2.0.1",
-		"@sveltejs/kit": "1.8.5",
-		"svelte": "^3.55.1",
-		"vite": "^4.1.4"
-	},
-	"type": "module",
-	"files": [
-		"build/"
-	]
+  "name": "soul-studio",
+  "version": "0.1.0",
+  "description": "GUI for Soul: A SQLite REST and realtime server",
+  "type": "module",
+  "files": [
+    "build/"
+  ],
+  "scripts": {
+    "dev": "npm run generate:extensions && vite dev --port 3000",
+    "build": "npm run generate:extensions && vite build",
+    "preview": "vite preview",
+    "predev": "npm run generate:extensions",
+    "prebuild": "npm run generate:extensions",
+    "generate:extensions": "node scripts/generate-extensions-registry.mjs",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,svelte}": "eslint --fix",
+    "*.{js,ts,svelte,css,md,json}": "prettier --write"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thevahidal/soul-studio.git"
+  },
+  "author": "Vahid Al @thevahidal",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thevahidal/soul/issues"
+  },
+  "homepage": "https://github.com/thevahidal/soul#readme",
+  "engines": {
+    "node": "22.x || 23.x || 24.x || 25.x || 26.x"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.62.1",
+    "@sveltejs/adapter-node": "^5.5.7",
+    "@sveltejs/kit": "^2.70.2",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.2.9",
+    "@vitest/coverage-v8": "^4.1.10",
+    "dotenv": "^17.4.2",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-svelte": "^3.22.0",
+    "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "jsdom": "^27.0.0",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2",
+    "prettier-plugin-svelte": "^3.4.0",
+    "svelte": "^5.56.8",
+    "svelte-check": "^4.7.5",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
+  }
 }

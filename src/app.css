@@ -1,0 +1,97 @@
+:root {
+  --background: #0f0f10;
+  --paper: #17181a;
+  --text: #e6e6e6;
+  --text-muted: #9a9a9a;
+  --divider: #2a2b2e;
+  --primary: #5b8dee;
+  --danger: #e5534b;
+  --success: #3fb950;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--background);
+  color: var(--text);
+}
+
+a {
+  color: var(--primary);
+}
+
+input,
+select,
+button {
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--paper);
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--divider);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--divider);
+}
+
+.app-main {
+  padding: 1rem;
+}
+
+.toasts {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 100;
+}
+
+.toast {
+  padding: 0.6rem 0.9rem;
+  border-radius: 4px;
+  background: var(--paper);
+  border: 1px solid var(--divider);
+}
+
+.toast-error {
+  border-color: var(--danger);
+}
+
+.toast-success {
+  border-color: var(--success);
+}
