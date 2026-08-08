@@ -4,6 +4,8 @@
   import Table2Icon from '@lucide/svelte/icons/table-2';
   import SearchIcon from '@lucide/svelte/icons/search';
   import LogOutIcon from '@lucide/svelte/icons/log-out';
+  import PlusIcon from '@lucide/svelte/icons/plus';
+  import ShieldIcon from '@lucide/svelte/icons/shield';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
@@ -53,6 +55,16 @@
   <Sidebar.Content>
     <Sidebar.Group>
       <Sidebar.GroupLabel>Tables</Sidebar.GroupLabel>
+      {#if session.isSuperuserHint}
+        <Sidebar.GroupAction title="New table">
+          {#snippet child({ props })}
+            <a href={resolve('/tables/new')} {...props}>
+              <PlusIcon />
+              <span class="sr-only">New table</span>
+            </a>
+          {/snippet}
+        </Sidebar.GroupAction>
+      {/if}
       <Sidebar.GroupContent>
         {#if tablesStore.status === 'loading' || tablesStore.status === 'idle'}
           <div class="flex flex-col gap-2 px-2 py-1">
@@ -93,6 +105,28 @@
         {/if}
       </Sidebar.GroupContent>
     </Sidebar.Group>
+
+    {#if session.isSuperuserHint}
+      <Sidebar.Group>
+        <Sidebar.GroupLabel>Admin</Sidebar.GroupLabel>
+        <Sidebar.GroupContent>
+          <Sidebar.Menu>
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                isActive={page.url.pathname === resolve('/roles')}
+              >
+                {#snippet child({ props })}
+                  <a href={resolve('/roles')} {...props}>
+                    <ShieldIcon />
+                    <span>Roles</span>
+                  </a>
+                {/snippet}
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+          </Sidebar.Menu>
+        </Sidebar.GroupContent>
+      </Sidebar.Group>
+    {/if}
   </Sidebar.Content>
 
   <Sidebar.Footer class="gap-2 px-3 pb-3">

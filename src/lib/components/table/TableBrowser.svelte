@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { deleteRow, insertRow, listRows, updateRow } from '$lib/api/rows';
-  import { getTableSchema } from '$lib/api/tables';
+  import { deleteTable, getTableSchema } from '$lib/api/tables';
   import type { Row } from '$lib/api/types';
   import { isHttpError } from '$lib/api/errors';
   import {
@@ -10,6 +12,7 @@
     type UpdateData,
   } from '$lib/api/ws';
   import { rowMatchesQuery } from '$lib/realtime/rowMatcher';
+  import { tablesStore } from '$lib/stores/tables.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { displayLabel } from '$lib/metadata/displayValue';
   import {
@@ -55,6 +58,7 @@
 
   let deleteTarget = $state<Row | 'bulk' | null>(null);
   let deleteDialogOpen = $state(false);
+  let deleteTableDialogOpen = $state(false);
 
   const pkField = $derived(fields.find((f) => f.isPrimaryKey)?.name ?? 'id');
   const fkColumns = $derived(
@@ -271,6 +275,17 @@
     deleteTarget = null;
   };
 
+  const confirmDeleteTable = async () => {
+    try {
+      await deleteTable(tableName);
+      toast.push('Table deleted', 'success');
+      await tablesStore.reload();
+      goto(resolve('/tables'));
+    } catch (err) {
+      toast.push(errorMessage(err), 'error');
+    }
+  };
+
   const cellDisplay = (row: Row, field: FieldDescriptor): string => {
     if (field.foreignKey) {
       const related = row[`${field.name}_data`] as Row | undefined;
@@ -293,7 +308,18 @@
         <Badge variant="secondary">{total} row{total === 1 ? '' : 's'}</Badge>
       {/if}
     </div>
-    <Button onclick={openCreate}>+ New row</Button>
+    <div class="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Delete table"
+        class="text-destructive hover:text-destructive"
+        onclick={() => (deleteTableDialogOpen = true)}
+      >
+        <Trash2Icon class="size-3.5" />
+      </Button>
+      <Button onclick={openCreate}>+ New row</Button>
+    </div>
   </div>
 
   {#if fields.length > 0}
@@ -439,6 +465,27 @@
         onclick={confirmDelete}
       >
         Delete
+      </AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>
+
+<AlertDialog.Root bind:open={deleteTableDialogOpen}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Delete table "{tableName}"?</AlertDialog.Title>
+      <AlertDialog.Description>
+        This permanently deletes the table and all of its rows. This action
+        cannot be undone.
+      </AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action
+        class="bg-destructive hover:bg-destructive/90 text-white"
+        onclick={confirmDeleteTable}
+      >
+        Delete table
       </AlertDialog.Action>
     </AlertDialog.Footer>
   </AlertDialog.Content>
