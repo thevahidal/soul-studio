@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "predev": "npm run generate:extensions",
     "prebuild": "npm run generate:extensions",
+    "precheck": "npm run generate:extensions",
     "generate:extensions": "node scripts/generate-extensions-registry.mjs",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "eslint .",
