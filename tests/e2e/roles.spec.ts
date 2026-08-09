@@ -15,7 +15,11 @@ test('superuser can create a role, grant a permission, and assign it to a user',
 
   await page.getByPlaceholder('New role name').fill(roleName);
   await page.getByRole('button', { name: 'Add role' }).click();
-  await expect(page.getByText(roleName)).toBeVisible();
+  // Scoped to the roles list specifically -- the same role name also
+  // appears as a column header in the permissions grid below.
+  await expect(
+    page.getByRole('listitem').filter({ hasText: roleName }),
+  ).toBeVisible();
 
   // Grant read on the _users table for the new role in the permissions grid.
   const usersReadCheckbox = page.getByRole('checkbox', {

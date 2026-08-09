@@ -56,7 +56,12 @@
   <h2 class="text-lg font-semibold">Roles</h2>
 
   <form onsubmit={handleCreate} class="flex max-w-sm gap-2">
-    <Input bind:value={newRoleName} placeholder="New role name" />
+    <label class="sr-only" for="new-role-name">New role name</label>
+    <Input
+      id="new-role-name"
+      bind:value={newRoleName}
+      placeholder="New role name"
+    />
     <Button type="submit" disabled={submitting}>Add role</Button>
   </form>
 

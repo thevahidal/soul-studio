@@ -5,41 +5,40 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  lint:
-    runs-on: ubuntu-latest
+  # Matrix mirrors soul core's own CI shape
+  # ({ubuntu-latest, macos-latest} x {22.x, 24.x, 26.x}) -- lint/check/
+  # coverage/build all run per combination, fail-fast disabled so every
+  # combination reports rather than the run stopping at the first failure.
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node-version: [22.x, 24.x, 26.x]
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
-      - run: npm run lint
       - run: npm run check
-
-  unit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          cache: npm
-      - run: npm ci
+      - run: npm run lint
       - run: npm run test:coverage
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          cache: npm
-      - run: npm ci
       - run: npm run build
 
+  # Single-OS/single-Node: the e2e suite drives a real Chromium instance
+  # against a real, ephemeral Soul backend (see
+  # tests/e2e/fixtures/soul-backend.ts) -- running that across the full
+  # matrix above would mostly multiply cost, not coverage, since the app
+  # logic itself is already exercised there.
   e2e:
     runs-on: ubuntu-latest
     steps:
