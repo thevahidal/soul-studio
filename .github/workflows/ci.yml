@@ -45,15 +45,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: soul-studio
-      # TEMPORARY: the cookie SameSite/Secure, GET /api/tables/:name
-      # foreignKeys, and JWT jti fixes this suite depends on aren't on a
-      # published `soul-cli` release yet -- checking out the backend
-      # branch that has them directly. Switch this to `thevahidal/soul`'s
-      # default branch (and drop SOUL_BACKEND_CWD) once merged.
+      # Builds the backend from source rather than a published `soul-cli`
+      # release -- see fixtures/soul-backend.ts's resolveBackendCwd(),
+      # which always needs a real checkout (SOUL_BACKEND_CWD below) to
+      # spawn `node src/server.js` from, published package or not. Used to
+      # pin to the studio-cookie-samesite branch while the SameSite/
+      # foreignKeys/JWT fixes this suite depends on were still unmerged;
+      # now on thevahidal/soul's default branch since they landed there.
       - uses: actions/checkout@v4
         with:
           repository: thevahidal/soul
-          ref: studio-cookie-samesite
           path: soul
       - uses: actions/setup-node@v4
         with:
