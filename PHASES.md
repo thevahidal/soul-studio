@@ -1,10 +1,14 @@
 # Soul Studio rebuild — phase tracker
 
-Written to hand off across sessions. Each phase should land as its own
-mergeable slice — see the commits on `rebuild-sveltekit2-svelte5` for the
-pattern (implement → verify → commit → push, each phase self-contained).
+Written to hand off across sessions. Each phase lands as its own mergeable
+slice — see the commits on `rebuild-sveltekit2-svelte5` for the pattern
+(implement → verify → commit → push, each phase self-contained).
 
 ## Status
+
+All planned phases are done. Nothing in this doc is "remaining" work anymore
+— it's now a record of what shipped and where, kept for context on _why_
+things are shaped the way they are.
 
 - **Backend prereqs** — done, on `soul`'s `studio-cookie-samesite` branch:
   configurable cookie `SameSite`/`Secure`, additive `foreignKeys` on
@@ -21,99 +25,91 @@ pattern (implement → verify → commit → push, each phase self-contained).
   create/edit/delete (single + bulk), date/datetime input format
   handling. First Playwright specs (`auth.spec.ts`, `rows-crud.spec.ts`)
   and the e2e CI job, running against a real ephemeral Soul backend.
+- **UI redesign** — done: Tailwind v4 + shadcn-svelte reskin on top of
+  Phase 2's screens (sidebar table nav, real data-grid, `Sheet`-based row
+  create/edit, `AlertDialog` confirms, chip-based filters, `svelte-sonner`
+  toasts). UI primitives under `lib/components/ui/` are pulled from
+  shadcn-svelte's public registry rather than the interactive CLI, which
+  wouldn't cooperate non-interactively.
+- **Phase 3 (Realtime)** — done: `lib/api/ws.ts` subscribes to Soul's
+  `/ws/tables/<name>` broadcasts (cookie auth; rejection is a JSON message
+  immediately before an argumentless close, since the server gives no close
+  code) with a bounded reconnect. `lib/realtime/rowMatcher.ts` reimplements
+  the backend's filter/search predicate client-side, since broadcasts go to
+  every subscriber with no server-side query filtering. Wired into
+  `TableBrowser.svelte` — deliberately not full pagination-aware
+  reconciliation (a row is only ever inserted into the current page when
+  there's room, never forced into sort order out of a full page).
+  `tests/e2e/realtime.spec.ts` drives two separate browser _contexts_.
+- **Phase 4 (Table admin + roles/permissions)** — done: `routes/tables/new`
+  (`TableCreateForm` + `ColumnEditor`) builds the exact `CreateTablePayload`
+  shape, client-side mirroring the Joi constraints for fast feedback only.
+  Table delete lives as a header action on `TableBrowser`, gated by the
+  real per-table permission response rather than the superuser hint —
+  `DELETE /api/tables/:name` has a `:name` param, so unlike list/create a
+  non-superuser with explicit delete permission can legitimately use it.
+  `lib/api/roles.ts` + `routes/roles` (`RolesList`, `PermissionsGrid`,
+  `UserRolesAssignment`) are generic CRUD over `_roles`/
+  `_roles_permissions`/`_users_roles` (no dedicated backend endpoints
+  exist) — permission fields round-trip as literal `0`/`1`, not booleans.
+  `tests/e2e/tables-admin.spec.ts` / `roles.spec.ts` cover the non-superuser
+  negative case. A real backend bug surfaced here and was fixed on `soul`'s
+  `fix-users-roles-unique-constraint` branch: `_users_roles`'s unique
+  constraint was declared `UNIQUE(user_id, user_id)` (copy-paste typo)
+  instead of `UNIQUE(user_id, role_id)`, blocking a second role per user.
+- **Phase 5 (Plugin/extensibility)** — done: `docs/extensions/example-plugin.ts`
+  is a worked, realistic example (documentation only, outside the
+  live-scanned `_studio_extensions/`). `AppSidebar.svelte` now renders
+  `registry.navItems`; `TableBrowser.svelte`'s row-actions column renders
+  `registry.rowActions`. `fieldWidgets.ts`'s plugin-override resolution was
+  already wired from Phase 2 — this proved it end-to-end.
+  `tests/e2e/fixtures/seed-plugin.ts` writes a real plugin into
+  `_studio_extensions/` _before_ the Studio dev server starts in
+  `global-setup.ts` (the registry is generated once, via the `predev` hook)
+  targeting a dedicated `plugin_demo` table rather than the shared `books`
+  fixture, since plugin field renderers don't get an `id` to wire up label
+  association.
+- **Phase 6 (Polish, CI, release prep)** — done: CI extended with soul
+  core's `{ubuntu-latest, macos-latest} × {22.x, 24.x, 26.x}` matrix for
+  lint/check/coverage/build (e2e stays single-OS — real Chromium against a
+  real ephemeral backend there multiplies cost, not coverage).
+  `vite.config.js`'s coverage gate is scoped to the pure-logic layer this
+  project's unit tests actually cover by convention
+  (`api`/`metadata`/`realtime`/`extensions`), thresholds set from measured
+  coverage, not a guessed target. README rewritten with the real feature
+  list. Version bumped to `0.2.0`.
+  - The `npm link` same-origin smoke test surfaced a second, more serious
+    pre-existing bug, now fixed on `soul`'s `fix-studio-mount-prefix`
+    branch: `server.js` mounted Studio via `app.use('/studio', handler)`,
+    but Express strips the mount prefix from `req.url` before calling a
+    path-mounted middleware, while the adapter-node build (with
+    `paths.base: '/studio'` baked in) resolves its own routes against the
+    _unstripped_ URL — so every `/studio/*` request 404'd. This integration
+    path was never actually exercised end-to-end before this smoke test.
+    Fixed by mounting at the root and filtering by path manually instead of
+    letting Express's path-mount stripping run.
 
-Both branches are pushed but **not merged** — `soul-cookie-samesite` and
-`rebuild-sveltekit2-svelte5` are still open for review.
+## Branches, none merged yet
 
-## Remaining phases
+- `soul@studio-cookie-samesite` — backend prereqs (cookie SameSite/Secure,
+  foreignKeys, updatesuperuser, JWT jti, Joi cookie schema).
+- `soul@fix-users-roles-unique-constraint` — the `_users_roles` unique
+  constraint fix (Phase 4 finding).
+- `soul@fix-studio-mount-prefix` — the `/studio` mount fix (Phase 6
+  finding).
+- `soul-studio@rebuild-sveltekit2-svelte5` — everything else: Phases 1-6
+  plus the UI redesign, one commit per phase.
 
-### Phase 3 — Realtime
+## Known follow-ups (not blocking, not yet done)
 
-- `lib/api/ws.ts`: `subscribeToTable(name, { onInsert, onUpdate, onDelete, onAuthError })`
-  wrapping a native `WebSocket`, parsing `{type, data, _lookup_field}`
-  broadcast messages (see `soul/src/websocket.js` for the exact shape).
-  WS base URL derived from `PUBLIC_SOUL_API_URL` (or `window.location` if
-  unset) — never under `/studio`, since `/ws` is a root-level path on Soul
-  core same as `/api`.
-- Wire into `TableBrowser.svelte`: subscribe on mount, unsubscribe on
-  navigation away. Merge incoming broadcasts into the visible row list —
-  but filter client-side against the currently-active `_filters`/`_search`
-  first, since the backend broadcasts every table change to every
-  subscriber with no server-side query filtering.
-- Auth-close messages (no cookie / invalid / insufficient read permission)
-  surface as a toast, not a silent failure.
-- New `tests/e2e/realtime.spec.ts`: two Playwright browser _contexts_
-  (`browser.newContext()` twice, not two tabs in one context) — one
-  mutates a row, the other observes the change appear live without a
-  reload.
-- **Done when**: the two-context e2e spec passes in CI.
-
-### Phase 4 — Table admin + roles/permissions
-
-- `routes/tables/new/+page.svelte` (superuser-gated in nav, per the
-  documented quirk that table list/create have no `:name` param so
-  non-superusers always 403 there): `TableCreateForm.svelte` +
-  `ColumnEditor.svelte` building the exact `POST /api/tables/` body shape
-  (`name`, `autoAddCreatedAt`, `autoAddUpdatedAt`,
-  `schema[].{name,type,default,notNull,unique,primaryKey,foreignKey,index}`).
-  Client-side mirrors the backend's Joi constraints (name regex
-  `^[\w-]+$`, 2–30 chars, type enum) for fast feedback only — backend
-  stays the source of truth.
-- Table delete: confirm dialog → `DELETE /api/tables/:name`, surface the
-  reserved-name `409` / FK-constraint failures readably.
-- `routes/roles/+page.svelte`: no dedicated backend endpoint exists for
-  this — it's generic CRUD composed into one coherent UI over three
-  reserved tables:
-  - `RolesList.svelte` — CRUD on `_roles` (`id`, `name`).
-  - `PermissionsGrid.svelte` — a **tables × roles** matrix, four toggles
-    per cell (create/read/update/delete) bound to `_roles_permissions`
-    rows. Round-trip the four fields as `0`/`1` integers, not booleans
-    (that's the actual column type). Respect the `(role_id, table_name)`
-    unique constraint — upsert vs. insert depending on whether a row
-    already exists for that cell.
-  - `UserRolesAssignment.svelte` — assign/unassign roles via
-    `_users_roles` (`user_id`, `role_id`).
-- **Done when**: `tables-admin.spec.ts` and `roles.spec.ts` pass,
-  including the non-superuser negative case (403/hidden-from-nav).
-
-### Phase 5 — Plugin/extensibility system
-
-- `_studio_extensions/` directory convention (default, mirrors backend's
-  `_extensions` naming), configurable via `STUDIO_EXTENSIONS_DIR`.
-- `scripts/generate-extensions-registry.mjs` already exists and is wired
-  via `predev`/`prebuild` — currently always produces an empty registry
-  since nothing populates `_studio_extensions/` yet. This phase is about
-  actually exercising it: ship a worked example plugin under
-  `docs/extensions/example-plugin.ts` (documentation only, not inside the
-  live-scanned directory).
-- `lib/extensions/registry.ts` (merge/collision logic) and
-  `lib/extensions/types.ts` (`StudioPlugin`, `FieldRendererProps`) already
-  exist and are unit-tested — this phase is primarily about _consuming_
-  the registry in real UI: `Nav.svelte`'s nav-item rendering,
-  `fieldWidgets.ts`'s plugin-override resolution (already wired, just
-  needs a real plugin to prove it), `TableBrowser.svelte`'s row-action bar
-  (`registry.rowActions`).
-- **Done when**: dropping a plugin file in `_studio_extensions/` and
-  rebuilding visibly changes nav/field-rendering/row-actions, proven by a
-  seeded e2e spec (write a plugin file before the build step) plus the
-  existing registry unit tests.
-
-### Phase 6 — Polish, full CI matrix, release
-
-- Full CI matrix (multi-OS if warranted, matching `soul` core's
-  `{ubuntu-latest, macos-latest} × {22.x, 24.x, 26.x}` shape where it
-  makes sense).
-- Light accessibility pass on the generated forms/tables.
-- README/CONTRIBUTING rewrite for the new stack (current README's dev
-  section is accurate but minimal — this is where it gets the real
-  feature-list treatment).
-- Version bump; verify `soul` core's `"soul-studio": "^0.0.1"` dependency
-  pin still resolves correctly against the new build.
-- Manual smoke test of the `-S`/`--studio` same-origin mount via
-  `npm link` before tagging a release — this is the integration contract
-  (`soul/src/server.js` dynamically importing `soul-studio/build/handler.js`,
-  mounted at `/studio`) that every phase so far has been careful not to
-  break.
+- `soul`'s `package.json` pins `"soul-studio": "^0.0.1"` — semver's caret
+  range on a `0.0.x` version only allows patch bumps, so it will **not**
+  resolve `soul-studio@0.2.0` from a registry once published (this doesn't
+  affect `npm link`, which bypasses semver resolution entirely — only a
+  real `npm install` after publishing). Needs a pin update in `soul` before
+  or alongside publishing `soul-studio@0.2.0`.
+- None of the four branches above are merged into their respective `main`
+  branches yet.
 
 ## Local dev
 
@@ -125,5 +121,3 @@ superuser (`admin` / `Str0ngTestPw!1`); the DB persists at `soul/.dev.db`
 (gitignored) across runs. `soul --kill` tears it down and frees the ports.
 
 - Backend script: `soul/scripts/dev.sh`
-- Both repos' branches as of this writing: `soul@studio-cookie-samesite`,
-  `soul-studio@rebuild-sveltekit2-svelte5` — neither merged yet.
