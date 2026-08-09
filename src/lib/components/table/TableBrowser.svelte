@@ -373,7 +373,7 @@
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {#each rows as row (row[pkField])}
+          {#each rows as row, rowIndex (row[pkField] ?? rowIndex)}
             <Table.Row>
               <Table.Cell>
                 <Checkbox
