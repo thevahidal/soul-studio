@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Matrix mirrors soul core's own CI shape
+  # ({ubuntu-latest, macos-latest} x {22.x, 24.x, 26.x}) -- lint/check/
+  # coverage/build all run per combination, fail-fast disabled so every
+  # combination reports rather than the run stopping at the first failure.
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node-version: [22.x, 24.x, 26.x]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - run: npm run test:coverage
+      - run: npm run build
+
+  # Single-OS/single-Node: the e2e suite drives a real Chromium instance
+  # against a real, ephemeral Soul backend (see
+  # tests/e2e/fixtures/soul-backend.ts) -- running that across the full
+  # matrix above would mostly multiply cost, not coverage, since the app
+  # logic itself is already exercised there.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: soul-studio
+      # TEMPORARY: the cookie SameSite/Secure, GET /api/tables/:name
+      # foreignKeys, and JWT jti fixes this suite depends on aren't on a
+      # published `soul-cli` release yet -- checking out the backend
+      # branch that has them directly. Switch this to `thevahidal/soul`'s
+      # default branch (and drop SOUL_BACKEND_CWD) once merged.
+      - uses: actions/checkout@v4
+        with:
+          repository: thevahidal/soul
+          ref: studio-cookie-samesite
+          path: soul
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: soul-studio/package-lock.json
+      - working-directory: soul
+        run: npm ci
+      - working-directory: soul-studio
+        run: npm ci
+      - working-directory: soul-studio
+        run: npx playwright install --with-deps chromium
+      - working-directory: soul-studio
+        run: npm run test:e2e
+        env:
+          SOUL_BACKEND_CWD: ${{ github.workspace }}/soul
