@@ -1,3 +1,9 @@
+# Publishes to npm via Trusted Publishing (OIDC) -- no long-lived npm
+# token/secret involved. Requires a matching Trusted Publisher configured
+# on the package's npmjs.com settings: GitHub Actions, owner/repo
+# thevahidal/soul-studio, workflow filename `npm-publish.yml`, action
+# `npm publish` allowed. See https://docs.npmjs.com/trusted-publishers.
+
 name: Node.js Package
 
 on:
@@ -6,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish-npm:
@@ -18,11 +25,12 @@ jobs:
           registry-url: https://registry.npmjs.org/
           cache: npm
 
+      # Trusted Publishing needs npm CLI >=11.5.1; the version bundled with
+      # setup-node's Node 22 isn't guaranteed to be that recent.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run check
       - run: npm run lint
       - run: npm run test:coverage
       - run: npm run build
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
